@@ -50,9 +50,11 @@ El `↻ HH:MM` (reset) aparece solo cuando esa ventana tiene consumo >0%. Para l
 
 ## Requisitos
 
-- macOS o Linux con `bash`, `jq`, `date` y `awk` en PATH.
+- macOS, Linux o WSL con `bash` (≥3.2), `jq`, `date` y `awk` en PATH.
 - Plan Pro/Max de Claude para que los campos `rate_limits.*` aparezcan en stdin (en otros planes, solo se mostrará la barra `ctx`).
 - Terminal con soporte UTF-8 y ANSI colors.
+
+> El script detecta automáticamente si tu `date` es BSD (macOS) o GNU (Linux/WSL) y usa la sintaxis correcta para convertir el Unix epoch a hora local — no hace falta tocarlo.
 
 ## Cómo funciona
 
@@ -85,7 +87,6 @@ Hay paths de fallback con `//` por si Claude Code cambia algún nombre de campo:
 ## Caveats
 
 - Si tu plan no incluye `rate_limits` en stdin, las barras `5h`/`7d` se omiten silenciosamente y solo se muestra `ctx` — el script no rompe.
-- El reset es Unix epoch local; la conversión a hora usa `date -r <epoch>` (macOS/BSD). En Linux GNU sería `date -d @<epoch>` — si te falla en Linux, ajusta esa línea del script.
 - Anthropic puede cambiar el esquema del JSON de stdin sin previo aviso; los fallbacks `//` mitigan, pero si un día deja de mostrar algún campo, abrir el script y añadir el nuevo path.
 
 ## Verificar qué hay en tu stdin

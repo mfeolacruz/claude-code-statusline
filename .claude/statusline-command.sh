@@ -64,6 +64,11 @@ seven_reset=$(printf '%s' "$input" | jq -r '
   .rate_limits.seven_day.resets_at //
   empty' 2>/dev/null)
 
+# ── Helper: formatea Unix epoch en BSD (macOS) o GNU (Linux/WSL) date ────────
+fmt_epoch() {
+  date -r "$1" "+$2" 2>/dev/null || date -d "@$1" "+$2" 2>/dev/null
+}
+
 # ── Helper: añade ↻ HH:MM al segmento si pct>0 y hay epoch parseable ─────────
 append_reset() {
   local seg="$1" pct="$2" epoch="$3" fmt="$4"
@@ -71,7 +76,7 @@ append_reset() {
   [ -z "$epoch" ] && { printf '%s' "$seg"; return; }
   pct_int=$(echo "$pct" | awk '{printf "%d", int($1 + 0.5)}')
   [ "$pct_int" -le 0 ] && { printf '%s' "$seg"; return; }
-  reset_time=$(date -r "$epoch" "+$fmt" 2>/dev/null)
+  reset_time=$(fmt_epoch "$epoch" "$fmt")
   [ -z "$reset_time" ] && { printf '%s' "$seg"; return; }
   printf '%s ↻ %s' "$seg" "$reset_time"
 }
