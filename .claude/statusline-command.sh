@@ -38,31 +38,19 @@ input=$(cat)
 # jq es requerido; sin él no hay nada que mostrar
 command -v jq >/dev/null 2>&1 || exit 0
 
-# ── Extraer porcentajes y timestamps ──────────────────────────────────────────
-ctx_pct=$(printf '%s' "$input" | jq -r '
-  .context_window.used_percentage //
-  .transcript.used_percentage     //
-  .used_percentage                //
-  empty' 2>/dev/null)
-
-five_pct=$(printf '%s' "$input" | jq -r '
-  .rate_limits.five_hour.used_percentage //
-  .rate_limits.five_hour.utilization     //
-  .five_hour.used_percentage             //
-  empty' 2>/dev/null)
-
-five_reset=$(printf '%s' "$input" | jq -r '
-  .rate_limits.five_hour.resets_at //
-  empty' 2>/dev/null)
-
-seven_pct=$(printf '%s' "$input" | jq -r '
-  .rate_limits.seven_day.used_percentage //
-  .rate_limits.seven_day.utilization     //
-  empty' 2>/dev/null)
-
-seven_reset=$(printf '%s' "$input" | jq -r '
-  .rate_limits.seven_day.resets_at //
-  empty' 2>/dev/null)
+# ── Extraer porcentajes y timestamps (una sola llamada a jq) ─────────────────
+# Una invocación con @tsv en vez de cinco: reduce el coste de fork/exec en
+# cada render de la statusline, importante cuando hay ráfagas de repaints.
+IFS=$'\t' read -r ctx_pct five_pct five_reset seven_pct seven_reset <<<"$(
+  printf '%s' "$input" | jq -r '
+    [
+      (.context_window.used_percentage // .transcript.used_percentage // .used_percentage // ""),
+      (.rate_limits.five_hour.used_percentage // .rate_limits.five_hour.utilization // .five_hour.used_percentage // ""),
+      (.rate_limits.five_hour.resets_at // ""),
+      (.rate_limits.seven_day.used_percentage // .rate_limits.seven_day.utilization // ""),
+      (.rate_limits.seven_day.resets_at // "")
+    ] | @tsv' 2>/dev/null
+)"
 
 # ── Helper: formatea Unix epoch en BSD (macOS) o GNU (Linux/WSL) date ────────
 fmt_epoch() {
@@ -81,16 +69,21 @@ append_reset() {
   printf '%s ↻ %s' "$seg" "$reset_time"
 }
 
+# ── Detectar ancho del terminal para evitar wrapping ─────────────────────────
+# Si la línea completa no cabe, omitimos los segmentos menos críticos en vez
+# de dejar que la statusline wrappee sobre la conversación.
+cols=${COLUMNS:-$(tput cols 2>/dev/null || echo 120)}
+
 # ── Render ─────────────────────────────────────────────────────────────────────
 segments=()
 
 [ -n "$ctx_pct" ] && segments+=("$(make_bar "ctx" "$ctx_pct")")
 
-if [ -n "$five_pct" ]; then
+if [ -n "$five_pct" ] && [ "$cols" -ge 50 ]; then
   segments+=("$(append_reset "$(make_bar "5h" "$five_pct")" "$five_pct" "$five_reset" "%H:%M")")
 fi
 
-if [ -n "$seven_pct" ]; then
+if [ -n "$seven_pct" ] && [ "$cols" -ge 80 ]; then
   # 7d: si reset >24h, "DDD HH:MM"; si no, "HH:MM"
   fmt_7d="%H:%M"
   if [ -n "$seven_reset" ]; then
