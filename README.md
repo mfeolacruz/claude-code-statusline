@@ -42,7 +42,11 @@ El `↻ HH:MM` (reset) aparece solo cuando esa ventana tiene consumo >0%. Para l
 
 Verifica con `command -v jq` (debe imprimir un path).
 
-### 2. Copia el script a tu carpeta de Claude Code
+### 2. Copia el script a tu carpeta global de Claude Code
+
+La instalación se hace a nivel **global** (`~/.claude/`), no por proyecto. La statusline aplica a todas tus sesiones de Claude Code en cualquier directorio — no hace falta repetir la instalación por repo.
+
+> Claude Code lee config de dos sitios: `~/.claude/settings.json` (global, tu usuario) y `<repo>/.claude/settings.json` (por proyecto). Este script va en el global para que esté siempre disponible.
 
 ```bash
 mkdir -p ~/.claude
